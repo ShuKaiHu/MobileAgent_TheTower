@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Jupyter / cache
+*.ipynb_checkpoints
+
+# macOS
+.DS_Store
+
+# IDE / VS Code
+.vscode/
+
+# Virtual environment
+TheTower_venv/
+env/
+venv/
+
+# Images
+*.jpg
+*.png
+
+# Logs / Data
+*.log
+*.csvTheTower_venv/
+*.jpg
+*.png
+*.csv
