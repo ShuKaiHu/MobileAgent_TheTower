@@ -407,15 +407,7 @@ def main():
             # 🔍 每回合檢查是否有鑽石圖案出現
             detect_and_click_diamond(driver, img)
             # 🖼️ 每回合儲存裁切畫面（這邊請替換成你要的區域）
-            
 
-            grid_x, grid_y, cols, rows = 2, 26, 4, 40
-            is_single_color, color, _ = analyze_block(img, grid_x, grid_y, cols, rows)
-            if is_single_color and (color == np.array([88, 64, 205])).all():
-                real_touch(driver, *random.choice([(150, 600), (350, 700)]))
-            else:
-                real_touch(driver, 147, 809)
-            time.sleep(1)
             screenshot = driver.get_screenshot_as_png()
             img = cv2.imdecode(np.frombuffer(screenshot, np.uint8), cv2.IMREAD_COLOR)
             is_over, wave_number, coins_number, tier_number, full_path, crop_path = detect_game_over_and_wave(img, save_debug=False)
@@ -426,6 +418,16 @@ def main():
                 round_end_str = round_end.strftime("%Y-%m-%d %H:%M:%S")
                 print(f"🏁 Game Over | Wave: {wave_number} | Coins: {coins_number} | Tier: {tier_number} | ⏱ {round_end_str} | ⌛ {duration_sec}s")  
                 game_state = "game_over"
+                continue
+
+            # 原本的隨機點擊判斷（移至 is_over 判斷之後）
+            grid_x, grid_y, cols, rows = 2, 26, 4, 40
+            is_single_color, color, _ = analyze_block(img, grid_x, grid_y, cols, rows)
+            if is_single_color and (color == np.array([88, 64, 205])).all():
+                real_touch(driver, *random.choice([(150, 600), (350, 700)]))
+            else:
+                real_touch(driver, 147, 809)
+            time.sleep(1)
 
         elif game_state == "game_over":
             for attempt in range(10):
