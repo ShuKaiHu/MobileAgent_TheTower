@@ -371,7 +371,12 @@ def read_number_in_region(img, x1, y1, x2, y2):
 
 
 
-
+def draw_debug_points(img, points, filename="debug_click_positions.png"):
+    debug_img = img.copy()
+    for (x, y) in points:
+        cv2.circle(debug_img, (x, y), radius=10, color=(0, 0, 255), thickness=-1)
+    cv2.imwrite(filename, debug_img)
+    print(f"📸 已儲存點擊位置圖：{filename}")
 
 
 
@@ -424,7 +429,7 @@ def main():
             grid_x, grid_y, cols, rows = 2, 26, 4, 40
             is_single_color, color, _ = analyze_block(img, grid_x, grid_y, cols, rows)
             if is_single_color and (color == np.array([88, 64, 205])).all():
-                real_touch(driver, *random.choice([(150, 600), (350, 700)]))
+                real_touch(driver, *random.choice([(150, 625), (350, 700)]))
             else:
                 real_touch(driver, 147, 809)
             time.sleep(1)
