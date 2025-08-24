@@ -201,7 +201,8 @@ def save_wave_log(start_time, end_time, wave, coins, tier, screenshot_path=None,
         df["End Time"] = pd.to_datetime(df["End Time"], errors="coerce")
         df["Tier"] = pd.to_numeric(df["Tier"], errors="coerce", downcast="integer")
         df = df.dropna(subset=["End Time", "Tier"])
-        df = df.sort_values("End Time", ascending=False)
+        # df = df.sort_values("End Time", ascending=False)
+        df = df.sort_values(["Tier", "End Time"], ascending=[True, True])
         df = df.groupby("Tier").head(10)
         df.to_csv("wave_log.csv", index=False)
     except Exception as e:
@@ -277,62 +278,49 @@ def draw_circle_and_save(screenshot_np, center_x, center_y):
 #  鑽石圖示偵測與點擊
 # =========================
 def detect_and_click_diamond(driver, img, template_path="diamond_f.png", threshold=0.8):
+    import math
+    # 點擊前讀取數字
+    number_before = read_number_in_region(img, 625, 75, 695, 120)
+
     template = cv2.imread(template_path, cv2.IMREAD_COLOR)
     if template is None:
         print("❌ 找不到鑽石圖")
         return False
 
+    # 先進行基本偵測，確認畫面中有鑽石再進行後續動作
+    result_check = cv2.matchTemplate(img, template, cv2.TM_CCOEFF_NORMED)
+    _, max_val_check, _, _ = cv2.minMaxLoc(result_check)
+    if max_val_check < threshold:
+        # print("🔍 沒有偵測到鑽石，跳過")
+        return False
+
+    # 若偵測到鑽石，開始依角度點擊
     screen_width, screen_height = get_screen_size(driver)
     real_height, real_width = img.shape[:2]
 
+    center_x, center_y = 614, 793  # 預估圓心（太陽）座標
+    radius = 160
+
     for angle in range(0, 360, 10):
-        rotated = rotate_image(template, angle)
-        result = cv2.matchTemplate(img, rotated, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, max_loc = cv2.minMaxLoc(result)
-        if max_val >= threshold:
-            h, w = rotated.shape[:2]
-            cx_img = max_loc[0] + w // 2
-            cy_img = max_loc[1] + h // 2
-            cx_screen, cy_screen = convert_to_screen(cx_img, cy_img, real_width, real_height, screen_width, screen_height)
+        radians = math.radians(angle)
+        cx_img = int(center_x + radius * math.cos(radians))
+        cy_img = int(center_y + radius * math.sin(radians))
+        cx_screen, cy_screen = convert_to_screen(cx_img, cy_img, real_width, real_height, screen_width, screen_height)
 
-            # 🧪 印出 debug 尺寸與座標
-            # print(f"[Debug] 圖片尺寸: {real_width}x{real_height}")
-            # print(f"[Debug] 螢幕尺寸: {screen_width}x{screen_height}")
-            # print(f"[Debug] 偵測位置（圖片）: ({cx_img}, {cy_img})")
-            # print(f"[Debug] 轉換後螢幕位置: ({cx_screen}, {cy_screen})")
+        try:
+            real_touch(driver, cx_screen, cy_screen)
+        except Exception as e:
+            print(f"⚠️ 點擊錯誤：{e}")
 
-            # ⭕️ 在圖片上畫紅圈並儲存
-            # debug_img = img.copy()
-            # cv2.circle(debug_img, (cx_img, cy_img), radius=50, color=(0, 0, 255), thickness=5)
-            # timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            # cv2.imwrite(f"debug_diamond_{timestamp}.png", debug_img)
+        time.sleep(0.1)
 
-            # 💡 點擊前讀數字
-            num_before = read_number_in_region(img, 100, 350, 250, 400)
-
-            # 🖱 執行兩種點擊方式（都測看看哪個準）
-            try:
-                real_touch(driver, cx_img, cy_img)  # 轉換後的螢幕座標
-                real_touch(driver, cx_screen, cy_screen)  # 轉換後的螢幕座標
-                # print("🖱 已執行 real_touch 點擊")
-            except Exception as e:
-                print(f"⚠️ 點擊錯誤：{e}")
-
-            # print(f"📍 圖片點擊座標：({cx_img}, {cy_img})")
-            # print(f"📱 螢幕點擊座標：({cx_screen}, {cy_screen})")
-            # print(f"🖼 圖片大小：{real_width}x{real_height}, 螢幕大小：{screen_width}x{screen_height}")            
-            
-            time.sleep(0.3)
-
-            # 💡 點擊後再截圖並比對
-            screenshot_after = driver.get_screenshot_as_png()
-            img_after = cv2.imdecode(np.frombuffer(screenshot_after, np.uint8), cv2.IMREAD_COLOR)
-            num_after = read_number_in_region(img_after, 100, 350, 250, 400)
-
-            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"💎 {now_str} ▶ 點擊鑽石 🔢 數字變化：{num_before} ➡ {num_after}")
-            return True
-    return False
+    # 點擊後重新截圖與讀取數字
+    screenshot_after = driver.get_screenshot_as_png()
+    img_after = cv2.imdecode(np.frombuffer(screenshot_after, np.uint8), cv2.IMREAD_COLOR)
+    number_after = read_number_in_region(img_after, 625, 75, 695, 120)
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"💎 {timestamp} ▶ 點擊鑽石 🔢 數字變化：{number_before} ➡ {number_after}")
+    return True
 
 
 def save_crop_region(img, x1, y1, x2, y2):
