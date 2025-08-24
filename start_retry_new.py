@@ -280,7 +280,7 @@ def draw_circle_and_save(screenshot_np, center_x, center_y):
 def detect_and_click_diamond(driver, img, template_path="diamond_f.png", threshold=0.8):
     import math
     # 點擊前讀取數字
-    number_before = read_number_in_region(img, 625, 75, 695, 120)
+    number_before = read_number_in_region(img, 100, 350, 250, 400)
 
     template = cv2.imread(template_path, cv2.IMREAD_COLOR)
     if template is None:
@@ -317,7 +317,7 @@ def detect_and_click_diamond(driver, img, template_path="diamond_f.png", thresho
     # 點擊後重新截圖與讀取數字
     screenshot_after = driver.get_screenshot_as_png()
     img_after = cv2.imdecode(np.frombuffer(screenshot_after, np.uint8), cv2.IMREAD_COLOR)
-    number_after = read_number_in_region(img_after, 625, 75, 695, 120)
+    number_after = read_number_in_region(img_after, 100, 350, 250, 400)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"💎 {timestamp} ▶ 點擊鑽石 🔢 數字變化：{number_before} ➡ {number_after}")
     return True
