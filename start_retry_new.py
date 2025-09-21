@@ -1,5 +1,8 @@
 import re
 import time
+
+# 全域開關：是否保存任何圖片（debug/截圖）
+SAVE_IMAGES = False
 import cv2
 import numpy as np
 import pytesseract
@@ -18,18 +21,38 @@ import time
 
 # ========================
 #  Appium 驅動初始化設定
-# ========================
+# ======================== 
 def setup_driver():
     options = XCUITestOptions()
     options.platform_name = "iOS"
-    options.platform_version = "18.4.1"
     options.device_name = "iPhone"
     options.udid = "00008101-000405C63E20001E"
     options.bundle_id = "com.TechTreeGames.TheTower"
-    options.use_new_wda = False
-    options.use_prebuilt_wda = True
+
+    # 讓 Appium 自動建置/安裝/啟動 WebDriverAgent（方案 A）
+    # - 不使用預建置 WDA、不跳過安裝
+    # - 確保使用正確的 Xcode 簽署 ID
     options.wda_launch_timeout = 60000
-    options.xcode_signing_id = "iPhone Developer"
+    options.xcode_signing_id = "Apple Development"
+    # 與 Appium 2.x + Xcode 16 生成之測試 runner 對齊：
+    # 實際簽署與啟動的 xctrunner 會使用 WebDriverAgentLib.xctrunner 作為 bundle 基底
+    # 若設為 Runner 可能造成 Xcode 嘗試啟動不存在的 bundle，如 `...Runner-.xctrunner`
+    options.updated_wda_bundle_id = "com.shukaihu.WebDriverAgentLib"
+    options.xcode_org_id = "MQJ88U9NAJ"
+
+    # 其他實用能力
+    options.set_capability("wdaLocalPort", 8100)
+    options.set_capability("showXcodeLog", True)
+    options.set_capability("skipLogCapture", True)
+    # 更穩定：預設重試；暫時不強制重建 WDA（避免剛安裝後被移除，方便到手機信任）
+    options.use_new_wda = False
+    options.set_capability("wdaStartupRetries", 3)
+    options.set_capability("wdaStartupRetryInterval", 10000)
+    # 遊戲畫面常變動，禁用靜止等待可避免啟動卡住
+    options.set_capability("waitForQuiescence", False)
+    # 避免長時間運行時 session 超時
+    options.set_capability("newCommandTimeout", 1200)
+
     return webdriver.Remote("http://localhost:4723", options=options)
 
 # =========================
@@ -102,8 +125,9 @@ def save_crop_region(img, x1, y1, x2, y2):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     cropped = img[y1:y2, x1:x2]
     filename = f"region_{x1}_{y1}_{x2}_{y2}_{timestamp}.jpg"
-    cv2.imwrite(filename, cropped)
-    print(f"🖼️ 儲存區域截圖：{filename}")
+    if SAVE_IMAGES:
+        cv2.imwrite(filename, cropped)
+        print(f"🖼️ 儲存區域截圖：{filename}")
 
 def detect_game_over_and_wave(img_cv, save_debug=False):
     gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
@@ -173,8 +197,9 @@ def detect_game_over_and_wave(img_cv, save_debug=False):
         cropped_path = f"screenshot_crop_{timestamp}.jpg"
         img_copy = img_cv.copy()
         cv2.rectangle(img_copy, (x1, y1), (x2, y2), (0, 255, 255), 2)
-        cv2.imwrite(screenshot_path, img_copy)
-        cv2.imwrite(cropped_path, coins_roi)
+        if SAVE_IMAGES:
+            cv2.imwrite(screenshot_path, img_copy)
+            cv2.imwrite(cropped_path, coins_roi)
 
     return found_retry, wave_number, coins_number, tier_number, screenshot_path, cropped_path
 
@@ -269,8 +294,9 @@ def draw_circle_and_save(screenshot_np, center_x, center_y):
     cv2.circle(debug_img, (center_x, center_y), radius=50, color=(0, 0, 255), thickness=5)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"debug_diamond_{timestamp}.png"
-    cv2.imwrite(filename, debug_img)
-    print(f"🖼️ 已儲存 debug 圖片：{filename}")
+    if SAVE_IMAGES:
+        cv2.imwrite(filename, debug_img)
+        print(f"🖼️ 已儲存 debug 圖片：{filename}")
 
 
 
@@ -327,8 +353,9 @@ def save_crop_region(img, x1, y1, x2, y2):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     cropped = img[y1:y2, x1:x2]
     filename = f"region_{x1}_{y1}_{x2}_{y2}_{timestamp}.jpg"
-    cv2.imwrite(filename, cropped)
-    print(f"🖼️ 儲存區域截圖：{filename}")
+    if SAVE_IMAGES:
+        cv2.imwrite(filename, cropped)
+        print(f"🖼️ 儲存區域截圖：{filename}")
 
 def read_number_in_region(img, x1, y1, x2, y2):
     import pytesseract
@@ -363,8 +390,9 @@ def draw_debug_points(img, points, filename="debug_click_positions.png"):
     debug_img = img.copy()
     for (x, y) in points:
         cv2.circle(debug_img, (x, y), radius=10, color=(0, 0, 255), thickness=-1)
-    cv2.imwrite(filename, debug_img)
-    print(f"📸 已儲存點擊位置圖：{filename}")
+    if SAVE_IMAGES:
+        cv2.imwrite(filename, debug_img)
+        print(f"📸 已儲存點擊位置圖：{filename}")
 
 
 
@@ -426,12 +454,13 @@ def main():
             for attempt in range(10):
                 screenshot = driver.get_screenshot_as_png()
                 img = cv2.imdecode(np.frombuffer(screenshot, np.uint8), cv2.IMREAD_COLOR)
-                is_over, wave_number, coins_number, tier_number, full_path, crop_path = detect_game_over_and_wave(img, save_debug=True)
+                # 不再保存任何圖片，停用 debug 截圖
+                is_over, wave_number, coins_number, tier_number, full_path, crop_path = detect_game_over_and_wave(img, save_debug=False)
                 if is_over:
                     round_end = datetime.datetime.now()
                     if not wave_number and SAVE_UNKNOWN_WAVE_SCREENSHOT:
                         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                        cv2.imwrite(f"wave_unknown_{timestamp}.jpg", img)
+                        pass  # 已停用保存未知 WAVE 圖片
                     save_wave_log(round_start, round_end, wave_number, coins_number, tier_number, full_path, crop_path)
                     real_touch(driver, 108, 588)
                     round_start = datetime.datetime.now()
@@ -444,4 +473,3 @@ def main():
 if __name__ == "__main__":
     main()
     # update_wave_log_summary()
-
