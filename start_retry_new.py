@@ -28,29 +28,14 @@ def setup_driver():
     options.device_name = "iPhone"
     options.udid = "00008101-000405C63E20001E"
     options.bundle_id = "com.TechTreeGames.TheTower"
+    options.updated_wda_bundle_id = "com.shukaihu.WebDriverAgentRunner"
 
-    # 讓 Appium 自動建置/安裝/啟動 WebDriverAgent（方案 A）
-    # - 不使用預建置 WDA、不跳過安裝
-    # - 確保使用正確的 Xcode 簽署 ID
-    options.wda_launch_timeout = 60000
-    options.xcode_signing_id = "Apple Development"
-    # 與 Appium 2.x + Xcode 16 生成之測試 runner 對齊：
-    # 實際簽署與啟動的 xctrunner 會使用 WebDriverAgentLib.xctrunner 作為 bundle 基底
-    # 若設為 Runner 可能造成 Xcode 嘗試啟動不存在的 bundle，如 `...Runner-.xctrunner`
-    options.updated_wda_bundle_id = "com.shukaihu.WebDriverAgentLib"
-    options.xcode_org_id = "MQJ88U9NAJ"
-
-    # 其他實用能力
     options.set_capability("wdaLocalPort", 8100)
     options.set_capability("showXcodeLog", True)
     options.set_capability("skipLogCapture", True)
-    # 更穩定：預設重試；暫時不強制重建 WDA（避免剛安裝後被移除，方便到手機信任）
-    options.use_new_wda = False
     options.set_capability("wdaStartupRetries", 3)
     options.set_capability("wdaStartupRetryInterval", 10000)
-    # 遊戲畫面常變動，禁用靜止等待可避免啟動卡住
     options.set_capability("waitForQuiescence", False)
-    # 避免長時間運行時 session 超時
     options.set_capability("newCommandTimeout", 1200)
 
     return webdriver.Remote("http://localhost:4723", options=options)
@@ -445,7 +430,7 @@ def main():
             grid_x, grid_y, cols, rows = 2, 26, 4, 40
             is_single_color, color, _ = analyze_block(img, grid_x, grid_y, cols, rows)
             if is_single_color and (color == np.array([88, 64, 205])).all():
-                real_touch(driver, *random.choice([(150, 625), (350, 700)]))
+                real_touch(driver, *random.choice([(150, 625), (350, 625), (350, 700)]))
             else:
                 real_touch(driver, 147, 809)
             time.sleep(1)
