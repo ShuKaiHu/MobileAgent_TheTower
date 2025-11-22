@@ -23,23 +23,28 @@ import time
 #  Appium 驅動初始化設定
 # ======================== 
 def setup_driver():
+    from appium import webdriver
+    from appium.options.ios import XCUITestOptions
+
     options = XCUITestOptions()
     options.platform_name = "iOS"
     options.device_name = "iPhone"
-    options.udid = "00008101-000405C63E20001E"
+    options.udid = "00008101-000405C63E20001E"  # ← 你的真機 UDID
     options.bundle_id = "com.TechTreeGames.TheTower"
-    options.updated_wda_bundle_id = "com.shukaihu.WebDriverAgentRunner"
 
+    # 🚀 關鍵設定：完全使用現有的 WDA，不重新簽署、不重建
+    options.set_capability("useNewWDA", False)
+    options.set_capability("usePrebuiltWDA", True)
+    options.set_capability("shouldUseSingletonTestManager", True)
+    options.set_capability("useXctestrunFile", False)
+    options.set_capability("wdaBaseUrl", "http://192.168.1.105:8100")
     options.set_capability("wdaLocalPort", 8100)
-    options.set_capability("showXcodeLog", True)
-    options.set_capability("skipLogCapture", True)
-    options.set_capability("wdaStartupRetries", 3)
-    options.set_capability("wdaStartupRetryInterval", 10000)
-    options.set_capability("waitForQuiescence", False)
     options.set_capability("newCommandTimeout", 1200)
+    options.set_capability("waitForQuiescence", False)
+    options.set_capability("skipLogCapture", True)
+    options.set_capability("showXcodeLog", False)
 
-    return webdriver.Remote("http://localhost:4723", options=options)
-
+    return webdriver.Remote("http://127.0.0.1:4723", options=options)
 # =========================
 #  取得螢幕寬高 (Appium)
 # =========================
