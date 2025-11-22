@@ -1,11 +1,13 @@
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 
-# Jupyter / cache
-*.ipynb_checkpoints
+# Virtual environment
+TheTower_venv/
+venv/
+env/
 
 # macOS
 .DS_Store
@@ -13,18 +15,18 @@ __pycache__/
 # IDE / VS Code
 .vscode/
 
-# Virtual environment
-TheTower_venv/
-env/
-venv/
+# Jupyter cache
+*.ipynb_checkpoints
 
-# Images
-*.jpg
-*.png
+# DO NOT ignore your project images or csv (you need them)
+# So we remove the old *.png and *.csv rules
 
-# Logs / Data
+# Logs
 *.log
-*.csvTheTower_venv/
-*.jpg
-*.png
-*.csv
+
+# Appium / Xcode build artifacts
+build/
+DerivedData/
+
+# WebDriverAgent should NOT be committed
+WebDriverAgent/
